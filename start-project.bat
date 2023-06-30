@@ -1,0 +1,2 @@
+start cmd.exe /k "cd C:\Program Files\MongoDB\Server\6.0\bin && mongod.exe --dbpath C:\Program Files\MongoDB\Server\6.0\data"
+start cmd.exe /k "cd C:\Users\abarb\Cursos\Master en React\React\social_network_server && npm start"
