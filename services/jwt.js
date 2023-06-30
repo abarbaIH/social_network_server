@@ -12,6 +12,7 @@ const createToken = (user) => {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
+        bio: user.bio,
         email: user.email,
         role: user.role,
         nickName: user.nickName,
