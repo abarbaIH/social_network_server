@@ -1,8 +1,10 @@
 // Importar dependencias y módulos
 const User = require('../models/User.model');
-const bcrypt = require('bcrypt');
-const jwt = require('./../services/jwt');
-const mongoosePaginate = require('mongoose-paginate-v2');
+const bcrypt = require('bcrypt'); // es una libreria de node para hashear passwords
+const jwt = require('./../services/jwt'); // es una libreria de node para sacar tokens
+const mongoosePaginate = require('mongoose-paginate-v2'); // es una libreria de node para paginar
+const fs = require("fs") // es una libreria de node para elimnar archivos...
+const path = require("path") // es una librería para crar path absolutos
 
 // Acciones de prueba
 const testUser = (req, res) => {
@@ -209,7 +211,7 @@ const update = (req, res) => {
         }
         // Buscar y actualizar el usuario con la nueva info
         User
-            .findByIdAndUpdate(userIdentity.id, userToUpdate, { new: true })
+            .findByIdAndUpdate({ _id: userIdentity.id }, userToUpdate, { new: true })
             .then(userUpdated => {
                 // Si no llega usuario
                 if (!userUpdated) {
@@ -243,15 +245,101 @@ const update = (req, res) => {
 }
 
 const upload = (req, res) => {
-    return (
-        res.status(200).send({
-            status: "success",
-            message: "subida de imagenes",
-            user: req.user,
-            file: req.file,
-            files: req.files
+
+
+    // Recoger el fichero de imagen y comprobar que existe
+
+    if (!req.file) {
+        return (
+            res.status(404).send({
+                status: "error",
+                message: "la petición no incluye el archivo de imagen"
+            })
+        )
+    }
+
+    // Conseguir el nombre del archivo
+
+    const fileOriginalName = req.file.originalname
+
+    // Sacar extensión del archivo
+    const fileSplit = fileOriginalName.split("\.")
+    const fileExtension = fileSplit[1]
+
+    // Comporbar si es correcta la extensión
+    if (fileExtension != "png" && fileExtension != "jpg" && fileExtension != "jpeg" && fileExtension != "gif") {
+
+        // Si no es correcta, borrar el archivo
+        const filePath = req.file.path // esta sería la ruta donde está el archivo
+        fs.unlinkSync(filePath) // es un método de la librería fs para borrar archivos
+
+        // Sacar respuesta negativa
+        return (
+            res.status(404).send({
+                status: "error",
+                message: "extensión del fichero subido inválida"
+            })
+        )
+    }
+
+    // Si es correcta, añadir el archivo a la db
+    User
+        .findByIdAndUpdate({ _id: req.user.id }, { avatar: req.file.filename }, { new: true })
+        .then(userUpdated => {
+
+            // Si no llega usuario
+            if (!userUpdated) {
+                return (
+                    res.status(500).send({
+                        status: "error",
+                        message: "se ha producido un error en la subida del avatar",
+                    })
+                )
+            }
+
+            // Retornar respuesta si ha ido todo bien
+            return (
+                res.status(200).send({
+                    status: "success",
+                    message: "añadida la imagen al usuario",
+                    user: userUpdated,
+                    file: req.file,
+                })
+            )
+
         })
-    )
+
+}
+
+const avatar = (req, res) => {
+
+    // Sacar el parámetro de la url
+    const fileUrl = req.params.file //tal ccomo indica la url de la ruta
+
+    // Montar el path del archivo
+    const filePath = (`../social_network_server/uploads/avatars/${fileUrl}`)
+
+
+    // Comprobar si el archivo existe (con el metodo stat de fs)
+    fs.stat(filePath, (error, exists) => {
+        if (!exists) {
+            return (
+                res.status(404).send({
+                    status: "error",
+                    message: "no existe la imagen",
+                    exists,
+                    error
+                })
+            )
+        }
+
+        // Si existe, retornaremos un archivo
+        return (
+            res.sendFile(path.resolve(filePath)) // path.resolve, nos devuelve una ruta absoluta
+        )
+    })
+
+
 }
 
 
@@ -263,5 +351,6 @@ module.exports = {
     profile,
     list,
     update,
-    upload
+    upload,
+    avatar
 };
