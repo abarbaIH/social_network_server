@@ -2,6 +2,9 @@
 const Follow = require('./../models/Follow.model');
 const User = require('./../models/User.model');
 
+// importara servicio
+const followService = require('../services/followService') // servicio que hemos montado para identificar ids de usuarios que se siguen entre sí
+
 // Importar dependencias
 const mongoosePaginate = require('mongoose-paginate-v2');
 
@@ -75,8 +78,7 @@ const deleteFollow = (req, res) => {
 
 // Acción de listado de usuarios que estoy siguiendo
 
-const followingList = (req, res) => {
-
+const followingList = async (req, res) => {
     // Recoger el id del usuario identificado
     let userId = req.user.id;
 
@@ -93,40 +95,81 @@ const followingList = (req, res) => {
     //Le marcamos el skip para que muestre sólo los elementos en cada pagina
     const skip = (page - 1) * itemsPerPage;
 
-    Follow.find({ user: userId })
-        .populate("user followed", "-password -role -__v")
-        .skip(skip)
-        .limit(itemsPerPage)
-        .then(usersFollowingList => {
-            Follow.countDocuments({ user: userId }).then(totalCount => {
-                const totalPages = Math.ceil(totalCount / itemsPerPage);
-                res.status(200).send({
-                    status: "success",
-                    message: "Se ha obtenido el listado de usuarios que estás siguiendo",
-                    usersFollowingList,
-                    totalPages
-                });
-            });
-        })
-        .catch(error => {
-            res.status(500).send({
-                status: "error",
-                message: "Se ha producido un error al intentar obtener el listado."
-            });
+    try {
+        const usersFollowingList = await Follow.find({ user: userId })
+            .populate("user followed", "-password -role -__v")
+            .skip(skip)
+            .limit(itemsPerPage);
+
+        const totalCount = await Follow.countDocuments({ user: userId });
+        const totalPages = Math.ceil(totalCount / itemsPerPage);
+
+        // esto lo sacamos del servicio que exporta con el metodo followUsersIds dos consultas following y followers, con eso tenemos a quién seguimos y quién nos sigue
+        const followUserIds = await followService.followUsersIds(req.user.id);
+
+
+        res.status(200).send({
+            status: "success",
+            message: "Se ha obtenido el listado de usuarios que estás siguiendo",
+            usersFollowingList,
+            totalPages,
+            user_following: followUserIds.followingClean,
+            users_follow_me: followUserIds.followersClean
         });
-}
-
-
+    } catch (error) {
+        res.status(500).send({
+            status: "error",
+            message: "Se ha producido un error al intentar obtener el listado."
+        });
+    }
+};
 
 // Acción de listado de usuarios que me siguen
 
-const followersList = (req, res) => {
-    return (
+const followersList = async (req, res) => {
+    // Recoger el id del usuario identificado
+    let userId = req.user.id;
+
+    // Comprobar si llegar el id por parámetro de la url (en caso de llegar es el que tiene la prioridad)
+    if (req.params.id) userId = userId
+
+    // Comprobar si me llega la página de la url (1 por defecto pero si llega por url, tiene prioridad)
+    let page = 1
+    if (req.params.page) page = parseInt(req.params.page)
+
+    // Cuántos usuarios por página 
+    const itemsPerPage = 5
+
+    //Le marcamos el skip para que muestre sólo los elementos en cada pagina
+    const skip = (page - 1) * itemsPerPage;
+
+    try {
+        const usersFollowingList = await Follow.find({ followed: userId })
+            .populate("user", "-password -role -__v")
+            .skip(skip)
+            .limit(itemsPerPage);
+
+        const totalCount = await Follow.countDocuments({ user: userId });
+        const totalPages = Math.ceil(totalCount / itemsPerPage);
+
+        // esto lo sacamos del servicio que exporta con el metodo followUsersIds dos consultas following y followers, con eso tenemos a quién seguimos y quién nos sigue
+        const followUserIds = await followService.followUsersIds(req.user.id);
+
+
         res.status(200).send({
             status: "success",
-            message: "se ha sacado el listado de usuarios que te siguen"
-        })
-    )
+            message: "Se ha obtenido el listado de usuarios que me siguen",
+            usersFollowingList,
+            totalPages,
+            user_following: followUserIds.followingClean,
+            users_follow_me: followUserIds.followersClean
+        });
+    } catch (error) {
+        res.status(500).send({
+            status: "error",
+            message: "Se ha producido un error al intentar obtener el listado."
+        });
+    }
 }
 
 // Exportar acciones
@@ -137,3 +180,4 @@ module.exports = {
     followingList,
     followersList
 };
+

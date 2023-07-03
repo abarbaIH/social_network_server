@@ -1,10 +1,16 @@
-// Importar dependencias y módulos
+// Importar Modelos 
 const User = require('../models/User.model');
+
+// importar dependencias
 const bcrypt = require('bcrypt'); // es una libreria de node para hashear passwords
-const jwt = require('./../services/jwt'); // es una libreria de node para sacar tokens
 const mongoosePaginate = require('mongoose-paginate-v2'); // es una libreria de node para paginar
 const fs = require("fs") // es una libreria de node para elimnar archivos...
 const path = require("path") // es una librería para crar path absolutos
+
+// Importar servicios
+const jwt = require('./../services/jwt'); // es un servicio que hemos montado para sacar tokens
+const followService = require('./../services/followService')
+
 
 // Acciones de prueba
 const testUser = (req, res) => {
@@ -118,6 +124,7 @@ const login = (req, res) => {
 
 // PERFIL DE USUARIO
 const profile = (req, res) => {
+
     // Recibir el parámetro de id de usuario por URL
     const user_id = req.params.user_id;
 
@@ -131,10 +138,15 @@ const profile = (req, res) => {
                     message: "Usuario no encontrado"
                 });
             }
+
+            // Añadir info de folloginf que viene del service
+            const followInfo = await followService.followThisUser(req.user.id, user_id)
             // Retornar el resultado
             return res.status(200).send({
                 status: "success",
-                user: userProfile
+                user: userProfile,
+                following: followInfo.following,
+                follower: followInfo.follower
             });
 
         });
@@ -142,8 +154,43 @@ const profile = (req, res) => {
 };
 
 // LISTA DE USUARIOS PAGINADA
-const list = (req, res) => {
-    // Controlar la página en la que estamos a través de la URL
+// const list = (req, res) => {
+//     // Controlar la página en la que estamos a través de la URL
+//     let page = 1;
+//     if (req.params.page) {
+//         page = parseInt(req.params.page);
+//     }
+
+//     let itemsPerPage = 5;
+
+//     User.paginate({}, { page, limit: itemsPerPage, sort: '_id' }, (err, users) => {
+//         if (err) {
+//             return res.status(500).send({
+//                 status: 'error',
+//                 message: 'Error en la consulta de usuarios',
+//                 error: err
+//             });
+//         }
+
+//         // esto lo sacamos del servicio que exporta con el metodo followUsersIds dos consultas following y followers, con eso tenemos a quién seguimos y quién nos sigue
+//         const followUserIds = followService.followUsersIds(req.user.id);
+
+
+//         return res.status(200).send({
+//             status: 'success',
+//             message: 'Ya tenemos la lista de usuarios',
+//             page: users.page,
+//             itemsPerPage: users.limit,
+//             total: users.totalDocs,
+//             usersList: users.docs,
+//             pages: users.totalPages,
+//             user_following: followUserIds.followingClean,
+//             users_follow_me: followUserIds.followersClean
+//         });
+//     });
+// };
+
+const list = async (req, res) => {
     let page = 1;
     if (req.params.page) {
         page = parseInt(req.params.page);
@@ -151,14 +198,18 @@ const list = (req, res) => {
 
     let itemsPerPage = 5;
 
-    User.paginate({}, { page, limit: itemsPerPage, sort: '_id' }, (err, users) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error en la consulta de usuarios',
-                error: err
+    try {
+        const users = await new Promise((resolve, reject) => {
+            User.paginate({}, { page, limit: itemsPerPage, sort: '_id' }, (err, users) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(users);
+                }
             });
-        }
+        });
+
+        const followUserIds = await followService.followUsersIds(req.user.id);
 
         return res.status(200).send({
             status: 'success',
@@ -167,9 +218,17 @@ const list = (req, res) => {
             itemsPerPage: users.limit,
             total: users.totalDocs,
             usersList: users.docs,
-            pages: users.totalPages
+            pages: users.totalPages,
+            user_following: followUserIds.followingClean,
+            users_follow_me: followUserIds.followersClean
         });
-    });
+    } catch (err) {
+        return res.status(500).send({
+            status: 'error',
+            message: 'Error en la consulta de usuarios',
+            error: err
+        });
+    }
 };
 
 const update = (req, res) => {
