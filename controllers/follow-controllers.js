@@ -33,7 +33,9 @@ const saveFollow = (req, res) => {
     userToFollow.save()
         .then(followStored => {
             return res.status(200).send({
-                follow: followStored
+                status: success,
+                message: "seguimiento guardado correctamente",
+                follow: followStored,
             });
         })
         // Registar eñ error
@@ -97,7 +99,7 @@ const followingList = async (req, res) => {
 
     try {
         const usersFollowingList = await Follow.find({ user: userId })
-            .populate("user followed", "-password -role -__v")
+            .populate("user followed", "-password -role -__v -email")
             .skip(skip)
             .limit(itemsPerPage);
 
@@ -145,7 +147,7 @@ const followersList = async (req, res) => {
 
     try {
         const usersFollowingList = await Follow.find({ followed: userId })
-            .populate("user", "-password -role -__v")
+            .populate("user", "-password -role -__v -email")
             .skip(skip)
             .limit(itemsPerPage);
 

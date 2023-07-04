@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
     }
 })
 
-// Crear el middleware con multar
+// Crear el middleware con multer
 const uploads = multer({ storage })
 
 // Definir rutas
@@ -25,7 +25,9 @@ router.get("/profile/:user_id", checkAuth.auth, UserController.profile);
 router.get("/list/:page?", checkAuth.auth, UserController.list);
 router.put("/update", checkAuth.auth, UserController.update);
 router.post("/upload", [checkAuth.auth, uploads.single("file0")], UserController.upload);
-router.get("/avatar/:file", checkAuth.auth, UserController.avatar);
+router.get("/avatar/:file", UserController.avatar);
+router.get("/counter/:user_id", checkAuth.auth, UserController.counter);
+
 
 
 // Exportar el router

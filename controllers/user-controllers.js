@@ -1,5 +1,8 @@
 // Importar Modelos 
 const User = require('../models/User.model');
+const Follow = require('../models/Follow.model');
+const Publication = require('../models/Publication.model');
+
 
 // importar dependencias
 const bcrypt = require('bcrypt'); // es una libreria de node para hashear passwords
@@ -153,43 +156,6 @@ const profile = (req, res) => {
 
 };
 
-// LISTA DE USUARIOS PAGINADA
-// const list = (req, res) => {
-//     // Controlar la página en la que estamos a través de la URL
-//     let page = 1;
-//     if (req.params.page) {
-//         page = parseInt(req.params.page);
-//     }
-
-//     let itemsPerPage = 5;
-
-//     User.paginate({}, { page, limit: itemsPerPage, sort: '_id' }, (err, users) => {
-//         if (err) {
-//             return res.status(500).send({
-//                 status: 'error',
-//                 message: 'Error en la consulta de usuarios',
-//                 error: err
-//             });
-//         }
-
-//         // esto lo sacamos del servicio que exporta con el metodo followUsersIds dos consultas following y followers, con eso tenemos a quién seguimos y quién nos sigue
-//         const followUserIds = followService.followUsersIds(req.user.id);
-
-
-//         return res.status(200).send({
-//             status: 'success',
-//             message: 'Ya tenemos la lista de usuarios',
-//             page: users.page,
-//             itemsPerPage: users.limit,
-//             total: users.totalDocs,
-//             usersList: users.docs,
-//             pages: users.totalPages,
-//             user_following: followUserIds.followingClean,
-//             users_follow_me: followUserIds.followersClean
-//         });
-//     });
-// };
-
 const list = async (req, res) => {
     let page = 1;
     if (req.params.page) {
@@ -267,7 +233,11 @@ const update = (req, res) => {
         if (userToUpdate.password) {
             let hashedPassword = await bcrypt.hash(userToUpdate.password, 10);
             userToUpdate.password = hashedPassword;
+            // si no llega elimnarla (eviatmos que se nos sobreescriba sobre la pasa de datos en vacío)
+        } else {
+            delete userToUpdate.password
         }
+
         // Buscar y actualizar el usuario con la nueva info
         User
             .findByIdAndUpdate({ _id: userIdentity.id }, userToUpdate, { new: true })
@@ -304,7 +274,6 @@ const update = (req, res) => {
 }
 
 const upload = (req, res) => {
-
 
     // Recoger el fichero de imagen y comprobar que existe
 
@@ -397,8 +366,29 @@ const avatar = (req, res) => {
             res.sendFile(path.resolve(filePath)) // path.resolve, nos devuelve una ruta absoluta
         )
     })
+}
 
 
+const counter = async (req, res) => {
+    let userId = req.user.user_id
+    if (req.params.user_id) userId = req.params.user_id
+    try {
+        const following = await Follow.count({ "user": userId })
+        const followed = await Follow.count({ "followed": userId })
+        const publications = await Publication.count({ "user": userId })
+        return res.status(200).send({
+            userId,
+            following: following,
+            followed: followed,
+            publications: publications
+        })
+    }
+    catch (error) {
+        return res.status(500).send({
+            status: "error",
+            message: "ha fallado el contador"
+        })
+    }
 }
 
 
@@ -411,5 +401,6 @@ module.exports = {
     list,
     update,
     upload,
-    avatar
+    avatar,
+    counter
 };

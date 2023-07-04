@@ -1,17 +1,20 @@
 const { Schema, model } = require("mongoose")
 
-const followSchema = Schema(
+const publicationSchema = Schema(
 
     {
-
         user: {
             type: Schema.ObjectId,
             ref: "User"
         },
 
-        followed: {
-            type: Schema.ObjectId,
-            ref: "User"
+        text: {
+            type: String,
+            require: true
+        },
+
+        file: {
+            type: String
         },
 
         created_at: {
@@ -26,4 +29,4 @@ const followSchema = Schema(
     }
 )
 
-module.exports = model("Follow", followSchema)
+module.exports = model("Publication", publicationSchema)
