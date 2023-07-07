@@ -14,6 +14,9 @@ const path = require("path") // es una librería para crar path absolutos
 const jwt = require('./../services/jwt'); // es un servicio que hemos montado para sacar tokens
 const followService = require('./../services/followService')
 
+// Importar validator
+const validate = require('./../helpers/validate')
+
 
 // Acciones de prueba
 const testUser = (req, res) => {
@@ -36,6 +39,18 @@ const signup = (req, res) => {
         });
     }
 
+    // Validación avanzada
+
+    try {
+        validate(userParams)
+    }
+    catch (error) {
+        res.status(400).send({
+            status: "error",
+            message: "Validación no superada",
+        })
+    }
+
     // Control de usuarios duplicados
     User.find({
         $or: [
@@ -45,7 +60,7 @@ const signup = (req, res) => {
     }).then(async (users) => {
         if (users && users.length >= 1) {
             return res.status(200).send({
-                status: "success",
+                status: "error",
                 message: "El usuario ya existe",
             });
         }

@@ -46,7 +46,7 @@ const savePublication = (req, res) => {
 
             // recoger respuesta si ha ido todo ok
             return res.status(200).send({
-                status: "succes",
+                status: "success",
                 message: "publicación guardado correctamente",
                 publicationStored
             });
@@ -159,6 +159,7 @@ const deletePublication = (req, res) => {
         .then(publicationDeleted => {
             if (publicationDeleted) {
                 return res.status(200).send({
+                    status: "success",
                     message: "La publicación se eliminó correctamente.",
                     publicationDeleted
                 });

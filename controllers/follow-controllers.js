@@ -33,13 +33,14 @@ const saveFollow = (req, res) => {
     userToFollow.save()
         .then(followStored => {
             return res.status(200).send({
-                status: success,
+                status: "success",
                 message: "seguimiento guardado correctamente",
                 follow: followStored,
             });
         })
         // Registar eñ error
         .catch(error => {
+            console.log(error)
             return res.status(500).send({
                 status: "error",
                 message: "Se ha producido un error"
@@ -61,11 +62,13 @@ const deleteFollow = (req, res) => {
         .then(followDeleted => {
             if (followDeleted) {
                 return res.status(200).send({
+                    status: "success",
                     message: "El usuario ha dejado de seguir correctamente.",
                     followDeleted
                 });
             } else {
                 return res.status(404).send({
+                    status: "error",
                     message: "El usuario a dejar de seguir no existe o no está siendo seguido."
                 });
             }
@@ -146,7 +149,7 @@ const followersList = async (req, res) => {
     const skip = (page - 1) * itemsPerPage;
 
     try {
-        const usersFollowingList = await Follow.find({ followed: userId })
+        const usersFollowersList = await Follow.find({ followed: userId })
             .populate("user", "-password -role -__v -email")
             .skip(skip)
             .limit(itemsPerPage);
@@ -161,7 +164,7 @@ const followersList = async (req, res) => {
         res.status(200).send({
             status: "success",
             message: "Se ha obtenido el listado de usuarios que me siguen",
-            usersFollowingList,
+            usersFollowersList,
             totalPages,
             user_following: followUserIds.followingClean,
             users_follow_me: followUserIds.followersClean
